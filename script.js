@@ -15,6 +15,108 @@
   const toastContainer = document.getElementById("toast-container");
   const statusBanner = document.getElementById("status-banner");
   const newGameBtn = document.getElementById("new-game-btn");
+  const statsBtn = document.getElementById("stats-btn");
+  const statsModalBackdrop = document.getElementById("stats-modal-backdrop");
+  const statsCloseBtn = document.getElementById("stats-close-btn");
+  const statsDistributionEl = document.getElementById("stats-distribution");
+
+  const STATS_KEY = "wordleblue-stats";
+
+  function defaultStats() {
+    return {
+      gamesPlayed: 0,
+      gamesWon: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+      guessDistribution: [0, 0, 0, 0, 0, 0],
+    };
+  }
+
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(STATS_KEY);
+      if (!raw) return defaultStats();
+      const parsed = JSON.parse(raw);
+      const stats = defaultStats();
+      if (typeof parsed.gamesPlayed === "number") stats.gamesPlayed = parsed.gamesPlayed;
+      if (typeof parsed.gamesWon === "number") stats.gamesWon = parsed.gamesWon;
+      if (typeof parsed.currentStreak === "number") stats.currentStreak = parsed.currentStreak;
+      if (typeof parsed.maxStreak === "number") stats.maxStreak = parsed.maxStreak;
+      if (Array.isArray(parsed.guessDistribution) && parsed.guessDistribution.length === MAX_GUESSES) {
+        stats.guessDistribution = parsed.guessDistribution.map((n) => (typeof n === "number" ? n : 0));
+      }
+      return stats;
+    } catch (e) {
+      return defaultStats();
+    }
+  }
+
+  function saveStats(stats) {
+    try {
+      localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    } catch (e) {
+      // localStorage unavailable (private mode, quota, etc.) — stats just won't persist.
+    }
+  }
+
+  function recordResult(won, guessCount) {
+    const stats = loadStats();
+    stats.gamesPlayed += 1;
+    if (won) {
+      stats.gamesWon += 1;
+      stats.currentStreak += 1;
+      stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+      stats.guessDistribution[guessCount - 1] += 1;
+    } else {
+      stats.currentStreak = 0;
+    }
+    saveStats(stats);
+    return stats;
+  }
+
+  function renderStatsModal(highlightGuessCount) {
+    const stats = loadStats();
+    const winPct = stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0;
+
+    document.getElementById("stat-played").textContent = String(stats.gamesPlayed);
+    document.getElementById("stat-win-pct").textContent = String(winPct);
+    document.getElementById("stat-streak").textContent = String(stats.currentStreak);
+    document.getElementById("stat-max-streak").textContent = String(stats.maxStreak);
+
+    const maxCount = Math.max(1, ...stats.guessDistribution);
+    statsDistributionEl.innerHTML = "";
+    stats.guessDistribution.forEach((count, i) => {
+      const rowEl = document.createElement("div");
+      rowEl.className = "dist-row";
+      if (highlightGuessCount === i + 1) rowEl.classList.add("current");
+
+      const labelEl = document.createElement("div");
+      labelEl.className = "dist-label";
+      labelEl.textContent = String(i + 1);
+
+      const trackEl = document.createElement("div");
+      trackEl.className = "dist-bar-track";
+
+      const fillEl = document.createElement("div");
+      fillEl.className = "dist-bar-fill";
+      fillEl.style.width = `${(count / maxCount) * 100}%`;
+      fillEl.textContent = String(count);
+
+      trackEl.appendChild(fillEl);
+      rowEl.appendChild(labelEl);
+      rowEl.appendChild(trackEl);
+      statsDistributionEl.appendChild(rowEl);
+    });
+  }
+
+  function openStatsModal(highlightGuessCount) {
+    renderStatsModal(highlightGuessCount);
+    statsModalBackdrop.classList.remove("hidden");
+  }
+
+  function closeStatsModal() {
+    statsModalBackdrop.classList.add("hidden");
+  }
 
   /** @type {{secret: string, board: string[][], row: number, col: number, over: boolean, keyStatus: Record<string,string>}} */
   let state;
@@ -149,6 +251,7 @@
 
   function endGame(won) {
     state.over = true;
+    const guessCount = state.row + 1;
     const finishUp = () => {
       let message;
       if (won) {
@@ -161,6 +264,9 @@
       }
       statusBanner.textContent = message;
       statusBanner.classList.remove("hidden");
+
+      recordResult(won, guessCount);
+      openStatsModal(won ? guessCount : null);
     };
     setTimeout(finishUp, WORD_LENGTH * 220 + 100);
   }
@@ -227,6 +333,7 @@
 
   function handleKey(key) {
     if (state.over) return;
+    if (!statsModalBackdrop.classList.contains("hidden")) return;
     if (key === "enter") {
       submitGuess();
     } else if (key === "backspace") {
@@ -249,6 +356,16 @@
   });
 
   newGameBtn.addEventListener("click", newGame);
+  statsBtn.addEventListener("click", () => openStatsModal());
+  statsCloseBtn.addEventListener("click", closeStatsModal);
+  statsModalBackdrop.addEventListener("click", (e) => {
+    if (e.target === statsModalBackdrop) closeStatsModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !statsModalBackdrop.classList.contains("hidden")) {
+      closeStatsModal();
+    }
+  });
 
   newGame();
 })();

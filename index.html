@@ -9,7 +9,10 @@
 <body>
   <header>
     <h1>WORDLE<span>BLUE</span></h1>
-    <button id="new-game-btn" type="button">New Game</button>
+    <div class="header-actions">
+      <button id="stats-btn" type="button">Stats</button>
+      <button id="new-game-btn" type="button">New Game</button>
+    </div>
   </header>
 
   <div id="toast-container" aria-live="polite"></div>
@@ -22,6 +25,33 @@
   <footer>
     <div id="keyboard" role="group" aria-label="On-screen keyboard"></div>
   </footer>
+
+  <div id="stats-modal-backdrop" class="hidden">
+    <div id="stats-modal" role="dialog" aria-label="Statistics" aria-modal="true">
+      <button id="stats-close-btn" type="button" aria-label="Close statistics">&times;</button>
+      <h2>Statistics</h2>
+      <div class="stats-summary">
+        <div class="stat">
+          <div class="stat-value" id="stat-played">0</div>
+          <div class="stat-label">Played</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-win-pct">0</div>
+          <div class="stat-label">Win %</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-streak">0</div>
+          <div class="stat-label">Current Streak</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-max-streak">0</div>
+          <div class="stat-label">Max Streak</div>
+        </div>
+      </div>
+      <h3>Guess Distribution</h3>
+      <div id="stats-distribution"></div>
+    </div>
+  </div>
 
   <script src="words.js"></script>
   <script src="script.js"></script>
