@@ -21,8 +21,9 @@
   box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
+html {
+  min-height: 100%;
+  background: var(--bg-bottom);
 }
 
 body {
